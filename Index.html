@@ -1,133 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Flappy Bird</title>
-  <style>
-    canvas {
-      background-color: #87CEEB; /* Sky blue */
-    }
-  </style>
+    <title>Flappy Bird</title>
+    <style>
+        canvas {
+            background-color: #87CEEB; /* Sky blue */
+        }
+    </style>
 </head>
 <body>
 <canvas id="gameCanvas" width="600" height="400"></canvas>
 <script>
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-  // Constants
-  const GRAVITY = 0.5;
-  const FLAP_POWER = -7;
-  const GROUND_Y = canvas.height - 20;
-  const BIRD_WIDTH = 20;
-  const BIRD_HEIGHT = 20;
-  const OBSTACLE_WIDTH = 50;
-  const OBSTACLE_HEIGHT = 100;
-  const OBSTACLE_SPACING = 150;
-  const OBSTACLE_SPEED = -2;
+    // Constants
+    const GRAVITY = 0.5;
+    const FLAP_POWER = -7;
+    const GROUND_Y = canvas.height - 20;
+    const BIRD_WIDTH = 20;
+    const BIRD_HEIGHT = 20;
+    const OBSTACLE_WIDTH = 50;
+    const OBSTACLE_HEIGHT = 100;
+    const OBSTACLE_SPACING = 150;
+    const OBSTACLE_SPEED = -2;
+    const MAX_HEIGHT = canvas.height - BIRD_HEIGHT - OBSTACLE_HEIGHT;
 
-  // State
-  let birdX = 50;
-  let birdY = 100;
-  let birdVelocity = 0;
-  let birdAcceleration = GRAVITY;
-  let birdFlapping = false;
-  let obstacles = [];
-  let score = 0;
-  let gameOver = false;
+    // State
+    let birdX = 50;
+    let birdY = 100;
+    let birdVelocity = 0;
+    let birdAcceleration = GRAVITY;
+    let birdFlapping = false;
+    let obstacles = [];
+    let score = 0;
+    let gameOver = false;
 
-  function update() {
-    // Apply gravity
-    birdVelocity += birdAcceleration;
+    function update() {
+        // Apply gravity
+        birdVelocity += birdAcceleration;
 
-    // Apply flap
-    if (birdFlapping) {
-      birdVelocity = FLAP_POWER;
-      birdFlapping = false;
+        // Apply flap
+        if (birdFlapping) {
+            birdVelocity = FLAP_POWER;
+            birdFlapping = false;
+        }
+
+        // Update position
+        birdY += birdVelocity;
+
+        // Check for ground collision
+        if (birdY > GROUND_Y) {
+            birdY = GROUND_Y;
+            birdVelocity = 0;
+            gameOver = true;
+        }
+
+        // Check for max height
+        if (birdY < 0) {
+            birdY = 0;
+            birdVelocity = 0;
+        }
+
+        // Update obstacles
+        for (let i = 0; i < obstacles.length; i++) {
+            let obstacle = obstacles[i];
+            obstacle.x += OBSTACLE_SPEED;
+
+            // Check for collision with bird
+            if (
+                (birdX + BIRD_WIDTH > obstacle.x && birdX < obstacle.x + OBSTACLE_WIDTH) &&
+                (birdY + BIRD_HEIGHT > obstacle.y && birdY < obstacle.y + OBSTACLE_HEIGHT)
+            ) {
+                gameOver = true;
+            }
+
+            // Check for score
+            if (!obstacle.scored && birdX > obstacle.x + OBSTACLE_WIDTH) {
+                obstacle.scored = true;
+                score++;
+            }
+
+            // Remove obstacle if it is off the screen
+            if (obstacle.x + OBSTACLE_WIDTH < 0) {
+                obstacles.splice(i, 1);
+                i--;
+            }
+        }
+
+        // Add new obstacle
+        if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - OBSTACLE_SPACING) {
+            let y = Math.floor(Math.random() * (MAX_HEIGHT - OBSTACLE_HEIGHT));
+            obstacles.push({x: canvas.width, y: y, scored: false});
+        }
     }
 
-    // Update position
-    birdY += birdVelocity;
+    function draw() {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Check for ground collision
-    if (birdY > GROUND_Y) {
-      birdY = GROUND_Y;
-      birdVelocity = 0;
-      gameOver = true;
+        // Draw obstacles
+        ctx.fillStyle = "green";
+        for (let obstacle of obstacles) {
+            ctx.fillRect(obstacle.x, obstacle.y, OBSTACLE_WIDTH, OBSTACLE_HEIGHT);
+        }
+
+        // Draw bird
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(birdX, birdY, BIRD_WIDTH, BIRD_HEIGHT);
+
+        // Draw score
+        ctx.fillStyle = "black";
+        ctx.font = "24px sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText(`Score: ${score}`, 10, 10);
     }
 
-    // Update obstacles
-    for (let i = 0; i < obstacles.length; i++) {
-      let obstacle = obstacles[i];
-      obstacle.x += OBSTACLE_SPEED;
+    function loop() {
+        update();
+        draw();
 
-      // Check for collision with bird
-      if (
-              (birdX + BIRD_WIDTH > obstacle.x && birdX < obstacle.x + OBSTACLE_WIDTH) &&
-              (birdY + BIRD_HEIGHT > obstacle.y && birdY < obstacle.y + OBSTACLE_HEIGHT)
-      ) {
-        gameOver = true;
-      }
-
-      // Check for score
-      if (!obstacle.scored && birdX > obstacle.x + OBSTACLE_WIDTH) {
-        obstacle.scored = true;
-        score++;
-      }
-
-      // Remove obstacle if it is off the screen
-      if (obstacle.x + OBSTACLE_WIDTH < 0) {
-        obstacles.splice(i, 1);
-        i--;
-      }
+        if (!gameOver) {
+            requestAnimationFrame(loop);
+        }
     }
 
-    // Add new obstacle
-    if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - OBSTACLE_SPACING) {
-      let y = Math.floor(Math.random() * (canvas.height - OBSTACLE_HEIGHT));
-      obstacles.push({ x: canvas.width, y: y, scored: false });
-    }
-  }
+    // Start game loop
+    loop();
 
-  function draw() {
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Handle flap input
+    document.addEventListener("keydown", event => {
+        if (event.code === "Space") {
+            birdFlapping = true;
+        }
+    });
 
-    // Draw obstacles
-    ctx.fillStyle = "green";
-    for (let obstacle of obstacles) {
-      ctx.fillRect(obstacle.x, obstacle.y, OBSTACLE_WIDTH, OBSTACLE_HEIGHT);
-    }
-
-    // Draw bird
-    ctx.fillStyle = "yellow";
-    ctx.fillRect(birdX, birdY, BIRD_WIDTH, BIRD_HEIGHT);
-
-    // Draw score
-    ctx.fillStyle = "black";
-    ctx.font = "24px sans-serif";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText(`Score: ${score}`, 10, 10);
-  }
-
-  function loop() {
-    update();
-    draw();
-
-    if (!gameOver) {
-      requestAnimationFrame(loop);
-    }
-  }
-
-  // Start game loop
-  loop();
-
-  // Handle flap input
-  document.addEventListener("keydown", event => {
-    if (event.code === "Space") {
-      birdFlapping = true;
-    }
-  });
 
 </script>
 </body>
